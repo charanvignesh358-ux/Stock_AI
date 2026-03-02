@@ -9,6 +9,11 @@ import numpy as np
 import json, os, threading
 
 app = Flask(__name__, static_folder='.', static_url_path='')
+
+# Fix MIME types for CSS and JS
+import mimetypes
+mimetypes.add_type('text/css', '.css')
+mimetypes.add_type('application/javascript', '.js')
 CORS(app)
 
 RESULTS_DIR = 'results'
@@ -32,9 +37,12 @@ def index():
 @app.route('/<path:path>')
 def static_files(path):
     """Serve CSS, JS, and other static assets."""
-    if os.path.exists(os.path.join('.', path)):
-        return send_from_directory('.', path)
-    return send_from_directory('.', 'index.html')
+    file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), path)
+    if os.path.exists(file_path) and os.path.isfile(file_path):
+        directory = os.path.dirname(file_path)
+        filename = os.path.basename(file_path)
+        return send_from_directory(directory, filename)
+    return send_from_directory(os.path.dirname(os.path.abspath(__file__)), 'index.html')
 
 
 @app.route('/api/predict/<ticker>')

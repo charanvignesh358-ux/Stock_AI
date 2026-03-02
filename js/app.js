@@ -9,9 +9,9 @@ const state = {
   preds:     null,
   model:     'lstm',
   range:     '3M',
-  watchlist: JSON.parse(localStorage.getItem('wl') || '[]'),
-  portfolio: JSON.parse(localStorage.getItem('portfolio') || '[]'),
-  theme:     localStorage.getItem('theme') || 'dark',
+  watchlist: (() => { try { return JSON.parse(localStorage.getItem('wl') || '[]'); } catch(e) { return []; } })(),
+  portfolio: (() => { try { return JSON.parse(localStorage.getItem('portfolio') || '[]'); } catch(e) { return []; } })(),
+  theme:     (() => { try { return localStorage.getItem('theme') || 'dark'; } catch(e) { return 'dark'; } })(),
 };
 
 const $ = id => document.getElementById(id);
@@ -48,7 +48,7 @@ function applyTheme(theme) {
   state.theme = theme;
   document.body.className = theme;
   $('themeToggle').textContent = theme === 'dark' ? '🌙' : '☀️';
-  localStorage.setItem('theme', theme);
+  try { localStorage.setItem('theme', theme); } catch(e) {}
 }
 $('themeToggle').addEventListener('click', () => {
   applyTheme(state.theme === 'dark' ? 'light' : 'dark');
@@ -390,7 +390,7 @@ function initWatchlistBtn() {
       showToast(`${state.ticker} already in watchlist`, 'info'); return;
     }
     state.watchlist.push(state.ticker);
-    localStorage.setItem('wl', JSON.stringify(state.watchlist));
+    try { localStorage.setItem('wl', JSON.stringify(state.watchlist)); } catch(e) {}
     renderWatchlistPanel();
     showToast(`⭐ ${state.ticker} added to watchlist`, 'success');
   });
@@ -399,7 +399,7 @@ function initWatchlistBtn() {
 function initClearWatchlist() {
   $('clearWatchlist').addEventListener('click', () => {
     state.watchlist = [];
-    localStorage.setItem('wl', '[]');
+    try { localStorage.setItem('wl', '[]'); } catch(e) {}
     renderWatchlistPanel();
     showToast('Watchlist cleared', 'info');
   });
@@ -442,7 +442,7 @@ function renderWatchlistPanel() {
     el.addEventListener('click', e => {
       e.stopPropagation();
       state.watchlist = state.watchlist.filter(s => s !== el.dataset.sym);
-      localStorage.setItem('wl', JSON.stringify(state.watchlist));
+      try { localStorage.setItem('wl', JSON.stringify(state.watchlist)); } catch(e) {}
       renderWatchlistPanel();
     });
   });
@@ -733,7 +733,7 @@ function initPortfolio() {
   $('savePositionBtn').addEventListener('click', savePosition);
   $('clearPortfolioBtn').addEventListener('click', () => {
     state.portfolio = [];
-    localStorage.setItem('portfolio', '[]');
+    try { localStorage.setItem('portfolio', '[]'); } catch(e) {}
     renderPortfolioPage();
     showToast('Portfolio cleared', 'info');
   });
@@ -754,7 +754,7 @@ function savePosition() {
   } else {
     state.portfolio.push({ ticker, shares, buyPrice });
   }
-  localStorage.setItem('portfolio', JSON.stringify(state.portfolio));
+  try { localStorage.setItem('portfolio', JSON.stringify(state.portfolio)); } catch(e) {}
   $('addPositionForm').style.display = 'none';
   $('posTicker').value = ''; $('posShares').value = ''; $('posBuyPrice').value = '';
   renderPortfolioPage();
@@ -821,7 +821,7 @@ function renderPortfolioPage() {
 
 function removePosition(ticker) {
   state.portfolio = state.portfolio.filter(p => p.ticker !== ticker);
-  localStorage.setItem('portfolio', JSON.stringify(state.portfolio));
+  try { localStorage.setItem('portfolio', JSON.stringify(state.portfolio)); } catch(e) {}
   renderPortfolioPage();
   showToast(`${ticker} removed from portfolio`, 'info');
 }
