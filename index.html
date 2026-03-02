@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>StockAI Pro – Advanced Stock Prediction Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="css/style.css"/>
+</head>
+<body class="dark">
+
+<!-- Sidebar -->
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <div class="logo">
+      <div class="logo-box">📈</div>
+      <span class="logo-text">StockAI Pro</span>
+    </div>
+    <button class="sidebar-toggle" id="sidebarToggle">☰</button>
+  </div>
+
+  <ul class="nav-links">
+    <li class="nav-item active" data-page="home">
+      <span class="nav-icon">🏠</span><span class="nav-label">Dashboard</span>
+    </li>
+    <li class="nav-item" data-page="analytics">
+      <span class="nav-icon">📊</span><span class="nav-label">Analytics</span>
+    </li>
+    <li class="nav-item" data-page="forecast">
+      <span class="nav-icon">🔮</span><span class="nav-label">AI Forecast</span>
+      <span class="nav-pill">NEW</span>
+    </li>
+    <li class="nav-item" data-page="compare">
+      <span class="nav-icon">⚖️</span><span class="nav-label">Model Compare</span>
+    </li>
+    <li class="nav-item" data-page="screener">
+      <span class="nav-icon">🔍</span><span class="nav-label">Screener</span>
+    </li>
+    <li class="nav-item" data-page="news">
+      <span class="nav-icon">📰</span><span class="nav-label">AI News</span>
+      <span class="nav-pill">NEW</span>
+    </li>
+    <li class="nav-item" data-page="portfolio">
+      <span class="nav-icon">💼</span><span class="nav-label">Portfolio</span>
+      <span class="nav-pill">NEW</span>
+    </li>
+    <li class="nav-item" data-page="about">
+      <span class="nav-icon">ℹ️</span><span class="nav-label">About</span>
+    </li>
+  </ul>
+
+  <div class="sidebar-footer">
+    <div class="market-status">
+      <span class="status-dot" id="marketDot"></span>
+      <span id="marketStatus">Checking...</span>
+    </div>
+  </div>
+</nav>
+
+<!-- Main Wrapper -->
+<div class="main-wrapper" id="mainWrapper">
+
+  <!-- Header -->
+  <header class="top-header">
+    <div class="header-left">
+      <button class="hamburger" id="hamburger">☰</button>
+      <h1 class="page-title" id="pageTitle">Dashboard</h1>
+    </div>
+    <div class="header-center">
+      <div class="search-container">
+        <input type="text" id="searchInput" class="search-input" placeholder="Search ticker  (AAPL, TSLA, NVDA…)" autocomplete="off"/>
+        <button class="search-btn" id="searchBtn">🔍</button>
+        <div class="search-suggestions" id="searchSuggestions"></div>
+      </div>
+    </div>
+    <div class="header-right">
+      <select class="model-select" id="modelSelect">
+        <option value="lstm">🔵 LSTM</option>
+        <option value="transformer">🟣 Transformer</option>
+        <option value="gru">🟢 GRU</option>
+      </select>
+      <button class="icon-header-btn" id="themeToggle" title="Toggle theme">🌙</button>
+      <div class="user-avatar" title="User Profile">HP</div>
+    </div>
+  </header>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <!-- ══════════════════ PAGE: DASHBOARD ══════════════════ -->
+  <main class="page active" id="page-home">
+
+    <!-- Ticker Tape -->
+    <div class="ticker-tape" id="tickerTape">
+      <div class="ticker-inner" id="tickerInner"></div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="stats-row" id="statsRow">
+      <div class="stat-card" id="card-price">
+        <div class="stat-label">Current Price</div>
+        <div class="stat-value" id="statPrice">--</div>
+        <div class="stat-change" id="statChange">Select a stock</div>
+      </div>
+      <div class="stat-card accent" id="card-pred">
+        <div class="stat-label">Next-Day Prediction</div>
+        <div class="stat-value" id="statPred">--</div>
+        <div class="stat-change" id="statPredChange">AI forecast</div>
+        <span class="stat-alert hold" id="statAlert" style="display:none">HOLD</span>
+      </div>
+      <div class="stat-card" id="card-rmse">
+        <div class="stat-label">Model RMSE</div>
+        <div class="stat-value" id="statRmse">--</div>
+        <div class="stat-sub">Lower is better</div>
+      </div>
+      <div class="stat-card" id="card-mae">
+        <div class="stat-label">Model MAE</div>
+        <div class="stat-value" id="statMae">--</div>
+        <div class="stat-sub">Mean Abs. Error</div>
+      </div>
+      <div class="stat-card" id="card-conf">
+        <div class="stat-label">AI Confidence</div>
+        <div class="stat-value" id="statConf">--</div>
+        <div class="confidence-bar"><div class="confidence-fill" id="confFill"></div></div>
+      </div>
+    </div>
+
+    <!-- Advanced Mini Metrics Row -->
+    <div class="mini-panels-row" id="miniPanelsRow" style="display:none">
+      <div class="mini-panel">
+        <div class="mini-panel-label">52W High</div>
+        <div class="mini-panel-val" id="mp52High" style="color:var(--green)">--</div>
+        <div class="mini-panel-sub">All-time year high</div>
+      </div>
+      <div class="mini-panel">
+        <div class="mini-panel-label">52W Low</div>
+        <div class="mini-panel-val" id="mp52Low" style="color:var(--red)">--</div>
+        <div class="mini-panel-sub">All-time year low</div>
+      </div>
+      <div class="mini-panel">
+        <div class="mini-panel-label">Avg Volume</div>
+        <div class="mini-panel-val" id="mpAvgVol">--</div>
+        <div class="mini-panel-sub">30-day average</div>
+      </div>
+      <div class="mini-panel">
+        <div class="mini-panel-label">Price / SMA20</div>
+        <div class="mini-panel-val" id="mpSmaRatio">--</div>
+        <div class="mini-panel-sub">Current vs moving avg</div>
+      </div>
+    </div>
+
+    <!-- Dashboard Grid -->
+    <div class="dashboard-grid">
+
+      <!-- Main Chart -->
+      <div class="chart-panel main-chart-panel">
+        <div class="panel-header">
+          <div class="panel-title-group">
+            <h2 class="panel-title" id="chartTitle">Select a Stock to Begin</h2>
+            <span class="last-updated" id="lastUpdated"></span>
+          </div>
+          <div class="chart-controls">
+            <div class="range-btns">
+              <button class="range-btn active" data-range="1M">1M</button>
+              <button class="range-btn" data-range="3M">3M</button>
+              <button class="range-btn" data-range="6M">6M</button>
+              <button class="range-btn" data-range="1Y">1Y</button>
+            </div>
+            <button class="icon-btn" id="refreshBtn" title="Refresh">↺</button>
+            <button class="icon-btn" id="watchlistBtn" title="Add to watchlist">⭐</button>
+          </div>
+        </div>
+        <div class="chart-loading" id="mainChartLoading">
+          <div class="skeleton-chart"></div>
+        </div>
+        <div class="chart-wrap" id="mainChartWrap" style="display:none; height:280px;">
+          <canvas id="mainChart"></canvas>
+        </div>
+        <div class="empty-state" id="mainEmptyState">
+          <div class="empty-icon">📉</div>
+          <p>Search a ticker symbol above for AI-powered price predictions with technical analysis</p>
+          <div class="quick-tickers">
+            <span class="quick-chip" data-ticker="AAPL">AAPL</span>
+            <span class="quick-chip" data-ticker="TSLA">TSLA</span>
+            <span class="quick-chip" data-ticker="MSFT">MSFT</span>
+            <span class="quick-chip" data-ticker="GOOGL">GOOGL</span>
+            <span class="quick-chip" data-ticker="NVDA">NVDA</span>
+            <span class="quick-chip" data-ticker="META">META</span>
+            <span class="quick-chip" data-ticker="AMZN">AMZN</span>
+            <span class="quick-chip" data-ticker="JPM">JPM</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Watchlist -->
+      <div class="chart-panel watchlist-panel">
+        <div class="panel-header">
+          <h2 class="panel-title">⭐ Watchlist</h2>
+          <div style="display:flex;gap:5px">
+            <button class="icon-btn" id="clearWatchlist" title="Clear all">🗑️</button>
+          </div>
+        </div>
+        <div class="watchlist-list" id="watchlistContainer">
+          <div class="empty-state-small"><p>Add stocks with ⭐ above</p></div>
+        </div>
+      </div>
+
+      <!-- AI Signals row -->
+      <div class="chart-panel indicator-panel" id="signalPanel" style="display:none">
+        <div class="panel-header">
+          <h2 class="panel-title">🤖 AI Signals & Indicators</h2>
+          <span style="font-size:0.7rem;color:var(--text-muted)" id="signalTime"></span>
+        </div>
+        <div class="signal-row" id="signalRow"></div>
+        <div class="forecast-row" id="forecastRow"></div>
+      </div>
+
+      <!-- RSI -->
+      <div class="chart-panel indicator-panel">
+        <div class="panel-header">
+          <h2 class="panel-title">RSI (14) <span class="info-icon" data-tip="Relative Strength Index — measures speed and change of price movements. Above 70 = overbought (potential sell). Below 30 = oversold (potential buy).">ⓘ</span></h2>
+          <div class="rsi-signal" id="rsiSignal"></div>
+        </div>
+        <div style="height:110px"><canvas id="rsiChart"></canvas></div>
+      </div>
+
+      <!-- MACD -->
+      <div class="chart-panel indicator-panel">
+        <div class="panel-header">
+          <h2 class="panel-title">MACD <span class="info-icon" data-tip="Moving Average Convergence/Divergence — trend-following momentum indicator. Histogram shows momentum strength; crossover of MACD/Signal = trade signal.">ⓘ</span></h2>
+          <span id="macdSignalBadge" style="font-size:0.7rem;color:var(--text-muted)"></span>
+        </div>
+        <div style="height:110px"><canvas id="macdChart"></canvas></div>
+      </div>
+
+      <!-- Bollinger -->
+      <div class="chart-panel indicator-panel">
+        <div class="panel-header">
+          <h2 class="panel-title">Bollinger Bands <span class="info-icon" data-tip="Price bands 2 standard deviations above and below the 20-day SMA. Price touching upper band = overbought; lower band = oversold.">ⓘ</span></h2>
+        </div>
+        <div style="height:110px"><canvas id="bollingerChart"></canvas></div>
+      </div>
+
+      <!-- Volume -->
+      <div class="chart-panel indicator-panel">
+        <div class="panel-header">
+          <h2 class="panel-title">Volume <span class="info-icon" data-tip="Trading volume. Green = price closed up, Red = price closed down. High volume confirms price moves.">ⓘ</span></h2>
+          <span id="volBadge" style="font-size:0.7rem;color:var(--text-muted)"></span>
+        </div>
+        <div style="height:110px"><canvas id="volumeChart"></canvas></div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- ══════════════════ PAGE: ANALYTICS ══════════════════ -->
+  <main class="page" id="page-analytics">
+    <div class="analytics-layout">
+      <div class="analytics-main">
+        <div class="chart-panel">
+          <div class="panel-header">
+            <div class="panel-title-group">
+              <h2 class="panel-title" id="analyticsTitle">Deep Analytics</h2>
+              <span class="last-updated" id="analyticsUpdated"></span>
+            </div>
+            <div class="chart-controls">
+              <div class="range-btns">
+                <button class="range-btn active" data-range="1M">1M</button>
+                <button class="range-btn" data-range="3M">3M</button>
+                <button class="range-btn" data-range="1Y">1Y</button>
+                <button class="range-btn" data-range="ALL">All</button>
+              </div>
+            </div>
+          </div>
+          <div style="height:300px"><canvas id="analyticsChart"></canvas></div>
+        </div>
+
+        <div class="indicators-tabs">
+          <div class="tab-buttons">
+            <button class="tab-btn active" data-tab="rsi-tab">RSI</button>
+            <button class="tab-btn" data-tab="macd-tab">MACD</button>
+            <button class="tab-btn" data-tab="bb-tab">Bollinger</button>
+            <button class="tab-btn" data-tab="vol-tab">Volume</button>
+            <button class="tab-btn" data-tab="heat-tab">Heatmap</button>
+          </div>
+          <div class="tab-content active" id="rsi-tab"><div style="height:130px"><canvas id="analyticsRsi"></canvas></div></div>
+          <div class="tab-content" id="macd-tab"><div style="height:130px"><canvas id="analyticsMacd"></canvas></div></div>
+          <div class="tab-content" id="bb-tab"><div style="height:130px"><canvas id="analyticsBB"></canvas></div></div>
+          <div class="tab-content" id="vol-tab"><div style="height:130px"><canvas id="analyticsVol"></canvas></div></div>
+          <div class="tab-content" id="heat-tab">
+            <p style="font-size:0.77rem;color:var(--text-muted);margin-bottom:8px;padding-top:4px">Daily returns heatmap — last 12 weeks (green = positive, red = negative)</p>
+            <div class="heatmap-grid" id="heatmapGrid"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="analytics-sidebar">
+        <div class="chart-panel metrics-panel">
+          <h2 class="panel-title" style="margin-bottom:12px">📐 Model Metrics</h2>
+          <div class="metric-row"><span>RMSE</span><span class="metric-val" id="aRmse">--</span></div>
+          <div class="metric-row"><span>MAE</span><span class="metric-val" id="aMae">--</span></div>
+          <div class="metric-row"><span>MAPE</span><span class="metric-val" id="aMape">--</span></div>
+          <div class="metric-row"><span>R² Score</span><span class="metric-val" id="aR2">--</span></div>
+          <div class="metric-row"><span>Confidence</span><span class="metric-val accent-text" id="aConf">--</span></div>
+          <div class="metric-row"><span>Trend</span><span class="metric-val" id="aTrend">--</span></div>
+          <div class="metric-row"><span>Signal</span><span class="metric-val" id="aSignal">--</span></div>
+          <hr class="divider"/>
+          <div class="metric-row"><span>52W High</span><span class="metric-val" id="a52High">--</span></div>
+          <div class="metric-row"><span>52W Low</span><span class="metric-val" id="a52Low">--</span></div>
+          <div class="metric-row"><span>Avg Volume</span><span class="metric-val" id="aAvgVol">--</span></div>
+        </div>
+        <div class="chart-panel">
+          <h2 class="panel-title" style="margin-bottom:12px">📉 Loss Curve</h2>
+          <div style="height:160px"><canvas id="lossCurveChart"></canvas></div>
+        </div>
+        <div class="chart-panel">
+          <h2 class="panel-title" style="margin-bottom:10px">📊 Sector Performance</h2>
+          <div style="height:160px"><canvas id="sectorChart"></canvas></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ══════════════════ PAGE: AI FORECAST ══════════════════ -->
+  <main class="page" id="page-forecast">
+    <div class="compare-header">
+      <h2 class="section-heading">🔮 AI Multi-Day Forecast</h2>
+      <div class="compare-controls">
+        <input type="text" id="forecastSearch" class="search-input small" placeholder="Enter ticker…"/>
+        <button class="btn-primary" id="forecastBtn">Generate Forecast</button>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 280px;gap:12px;align-items:start">
+      <div>
+        <div class="chart-panel" style="margin-bottom:12px">
+          <div class="panel-header">
+            <h2 class="panel-title" id="forecastChartTitle">30-Day AI Forecast</h2>
+          </div>
+          <div style="height:300px"><canvas id="forecastChart"></canvas></div>
+        </div>
+        <div class="chart-panel">
+          <h2 class="panel-title" style="margin-bottom:14px">📅 Forecast Calendar</h2>
+          <div class="forecast-row" id="forecastCards">
+            <div style="text-align:center;color:var(--text-muted);padding:20px;font-size:0.84rem;grid-column:1/-1">Run a forecast to see day-by-day predictions</div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="chart-panel" style="margin-bottom:12px">
+          <h2 class="panel-title" style="margin-bottom:12px">📈 Forecast Metrics</h2>
+          <div class="metric-row"><span>Bull Case</span><span class="metric-val" id="fBull" style="color:var(--green)">--</span></div>
+          <div class="metric-row"><span>Base Case</span><span class="metric-val" id="fBase">--</span></div>
+          <div class="metric-row"><span>Bear Case</span><span class="metric-val" id="fBear" style="color:var(--red)">--</span></div>
+          <div class="metric-row"><span>Upside %</span><span class="metric-val" id="fUpside" style="color:var(--green)">--</span></div>
+          <div class="metric-row"><span>Downside %</span><span class="metric-val" id="fDownside" style="color:var(--red)">--</span></div>
+          <div class="metric-row"><span>Volatility</span><span class="metric-val" id="fVol">--</span></div>
+          <div class="metric-row"><span>Model Used</span><span class="metric-val accent-text" id="fModel">--</span></div>
+        </div>
+        <div class="chart-panel">
+          <h2 class="panel-title" style="margin-bottom:10px">🎯 Probability Distribution</h2>
+          <div style="height:160px"><canvas id="probChart"></canvas></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ══════════════════ PAGE: MODEL COMPARE ══════════════════ -->
+  <main class="page" id="page-compare">
+    <div class="compare-header">
+      <h2 class="section-heading">⚖️ Model Comparison</h2>
+      <div class="compare-controls">
+        <input type="text" id="compareSearch" class="search-input small" placeholder="Enter ticker…"/>
+        <button class="btn-primary" id="compareBtn">Compare Models</button>
+      </div>
+    </div>
+
+    <div class="compare-grid">
+      <div class="chart-panel">
+        <div class="panel-header"><h2 class="panel-title">🔵 LSTM</h2><span style="font-size:0.7rem;color:var(--blue)">Long Short-Term Memory</span></div>
+        <div style="height:200px"><canvas id="lstmChart"></canvas></div>
+      </div>
+      <div class="chart-panel">
+        <div class="panel-header"><h2 class="panel-title">🟣 Transformer</h2><span style="font-size:0.7rem;color:var(--purple)">Attention-Based</span></div>
+        <div style="height:200px"><canvas id="transformerChart"></canvas></div>
+      </div>
+      <div class="chart-panel">
+        <div class="panel-header"><h2 class="panel-title">🟢 GRU</h2><span style="font-size:0.7rem;color:var(--green)">Gated Recurrent Unit</span></div>
+        <div style="height:200px"><canvas id="gruChart"></canvas></div>
+      </div>
+    </div>
+
+    <div class="chart-panel">
+      <h2 class="panel-title" style="margin-bottom:14px">📊 Performance Comparison</h2>
+      <table class="compare-table" id="compareTable">
+        <thead><tr><th>Metric</th><th>LSTM</th><th>Transformer</th><th>GRU</th><th>Winner</th></tr></thead>
+        <tbody id="compareTableBody">
+          <tr><td colspan="5" class="table-empty">Run a comparison to see results</td></tr>
+        </tbody>
+      </table>
+      <div class="insights-panel">
+        <h3>Model Architecture Insights</h3>
+        <div class="insights-text">
+          <p><strong>LSTM</strong> – Long Short-Term Memory networks excel at learning long-range dependencies in sequential data, making them a robust baseline for stock price prediction across volatile markets.</p>
+          <p><strong>Transformer</strong> – Attention mechanisms allow the Transformer to weigh all past time steps simultaneously, often capturing complex volatility patterns and macro correlations more effectively.</p>
+          <p><strong>GRU</strong> – Gated Recurrent Units are a streamlined RNN variant that trains ~30% faster than LSTM with comparable accuracy, ideal for rapid re-training on fresh data.</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ══════════════════ PAGE: SCREENER ══════════════════ -->
+  <main class="page" id="page-screener">
+    <div class="compare-header">
+      <h2 class="section-heading">🔍 AI Stock Screener</h2>
+      <button class="btn-primary" id="screenBtn">Run Screen</button>
+    </div>
+
+    <div class="screener-layout">
+      <!-- Filters -->
+      <div class="chart-panel">
+        <h2 class="panel-title" style="margin-bottom:16px">⚙️ Filters</h2>
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div>
+            <label class="filter-label">Sector</label>
+            <select class="filter-select" id="sectorFilter">
+              <option value="">All Sectors</option>
+              <option value="Technology">Technology</option>
+              <option value="Semiconductors">Semiconductors</option>
+              <option value="Banking">Banking</option>
+              <option value="Streaming">Streaming</option>
+              <option value="E-Commerce">E-Commerce</option>
+              <option value="Fintech">Fintech</option>
+              <option value="Social Media">Social Media</option>
+              <option value="Entertainment">Entertainment</option>
+            </select>
+          </div>
+          <div>
+            <label class="filter-label">AI Signal</label>
+            <select class="filter-select" id="signalFilter">
+              <option value="">All Signals</option>
+              <option value="BUY">🟢 Buy</option>
+              <option value="HOLD">🟡 Hold</option>
+              <option value="SELL">🔴 Sell</option>
+            </select>
+          </div>
+          <div>
+            <label class="filter-label">Min Confidence: <span id="confFilterVal">60%+</span></label>
+            <input type="range" id="confFilter" min="50" max="95" value="60" style="width:100%;accent-color:var(--gold);margin-top:4px"/>
+          </div>
+          <div>
+            <label class="filter-label">Sort By</label>
+            <select class="filter-select" id="sortFilter">
+              <option value="conf">AI Confidence</option>
+              <option value="change">Daily Change</option>
+              <option value="price">Price</option>
+              <option value="rmse">Model RMSE</option>
+            </select>
+          </div>
+          <button class="btn-primary" id="screenBtn2" style="width:100%">Run Screen</button>
+        </div>
+      </div>
+
+      <!-- Results -->
+      <div class="chart-panel" style="padding:0;overflow:hidden">
+        <div style="padding:16px 18px 12px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+          <h2 class="panel-title">Screener Results</h2>
+          <span id="screenerCount" style="font-size:0.77rem;color:var(--text-muted)">0 stocks</span>
+        </div>
+        <div class="screener-wrapper">
+          <table class="screener-table" id="screenerTable">
+            <thead>
+              <tr>
+                <th>Ticker</th><th>Company</th><th>Sector</th>
+                <th>Price</th><th>Change</th><th>Conf.</th><th>Signal</th><th>RMSE</th>
+              </tr>
+            </thead>
+            <tbody id="screenerBody">
+              <tr><td colspan="8" class="table-empty">Click "Run Screen" to scan all stocks</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ══════════════════ PAGE: AI NEWS ══════════════════ -->
+  <main class="page" id="page-news">
+    <div class="compare-header">
+      <h2 class="section-heading">📰 AI Market News & Sentiment</h2>
+      <div class="compare-controls">
+        <input type="text" id="newsTickerInput" class="search-input small" placeholder="Filter by ticker…"/>
+        <button class="btn-primary" id="refreshNewsBtn">Refresh Feed</button>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 280px;gap:12px;align-items:start">
+      <div>
+        <!-- Sentiment Summary -->
+        <div class="chart-panel" style="margin-bottom:12px">
+          <h2 class="panel-title" style="margin-bottom:14px">🧠 Sentiment Overview</h2>
+          <div class="mini-panels-row" style="margin-bottom:0;grid-template-columns:repeat(3,1fr)">
+            <div class="mini-panel">
+              <div class="mini-panel-label">Bullish Articles</div>
+              <div class="mini-panel-val" id="newsBull" style="color:var(--green)">--</div>
+              <div class="mini-panel-sub">Positive sentiment</div>
+            </div>
+            <div class="mini-panel">
+              <div class="mini-panel-label">Bearish Articles</div>
+              <div class="mini-panel-val" id="newsBear" style="color:var(--red)">--</div>
+              <div class="mini-panel-sub">Negative sentiment</div>
+            </div>
+            <div class="mini-panel">
+              <div class="mini-panel-label">Overall Mood</div>
+              <div class="mini-panel-val" id="newsMood" style="color:var(--gold)">--</div>
+              <div class="mini-panel-sub">Market sentiment</div>
+            </div>
+          </div>
+        </div>
+        <!-- News Feed -->
+        <div class="chart-panel">
+          <div class="panel-header">
+            <h2 class="panel-title">📡 Live News Feed (Simulated)</h2>
+            <span style="font-size:0.68rem;color:var(--text-muted)" id="newsFeedTime"></span>
+          </div>
+          <div class="news-list" id="newsList">
+            <div class="empty-state-small"><p>Loading news feed…</p></div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="chart-panel" style="margin-bottom:12px">
+          <h2 class="panel-title" style="margin-bottom:12px">📊 Sentiment by Stock</h2>
+          <div style="height:220px"><canvas id="sentimentChart"></canvas></div>
+        </div>
+        <div class="chart-panel">
+          <h2 class="panel-title" style="margin-bottom:12px">🔥 Trending Tickers</h2>
+          <div id="trendingList" style="display:flex;flex-direction:column;gap:7px"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ══════════════════ PAGE: PORTFOLIO ══════════════════ -->
+  <main class="page" id="page-portfolio">
+    <div class="compare-header">
+      <h2 class="section-heading">💼 AI Portfolio Tracker</h2>
+      <div class="compare-controls">
+        <button class="btn-secondary" id="clearPortfolioBtn">Clear All</button>
+        <button class="btn-primary" id="addPositionBtn">+ Add Position</button>
+      </div>
+    </div>
+
+    <!-- Add Position Form -->
+    <div class="chart-panel" id="addPositionForm" style="margin-bottom:12px;display:none">
+      <h2 class="panel-title" style="margin-bottom:14px">➕ Add New Position</h2>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;align-items:end">
+        <div>
+          <label class="filter-label">Ticker</label>
+          <input type="text" id="posTicker" class="search-input" placeholder="AAPL" style="width:100%"/>
+        </div>
+        <div>
+          <label class="filter-label">Shares</label>
+          <input type="number" id="posShares" class="search-input" placeholder="10" style="width:100%"/>
+        </div>
+        <div>
+          <label class="filter-label">Avg Buy Price ($)</label>
+          <input type="number" id="posBuyPrice" class="search-input" placeholder="150.00" style="width:100%"/>
+        </div>
+        <button class="btn-primary" id="savePositionBtn" style="height:38px">Add to Portfolio</button>
+      </div>
+    </div>
+
+    <!-- Portfolio Overview Cards -->
+    <div class="stats-row" style="grid-template-columns:repeat(4,1fr);margin-bottom:12px">
+      <div class="stat-card">
+        <div class="stat-label">Total Value</div>
+        <div class="stat-value" id="portTotalVal">$0.00</div>
+        <div class="stat-change" id="portTotalChg">No positions</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total P&amp;L</div>
+        <div class="stat-value" id="portPnL">$0.00</div>
+        <div class="stat-sub">Unrealized gain/loss</div>
+      </div>
+      <div class="stat-card accent">
+        <div class="stat-label">AI Projected Value</div>
+        <div class="stat-value" id="portAiVal">$0.00</div>
+        <div class="stat-sub">Next-day AI forecast</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Positions</div>
+        <div class="stat-value" id="portCount">0</div>
+        <div class="stat-sub">Active holdings</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 300px;gap:12px;align-items:start">
+      <!-- Positions Table -->
+      <div class="chart-panel" style="padding:0;overflow:hidden">
+        <div style="padding:16px 18px 12px;border-bottom:1px solid var(--border)">
+          <h2 class="panel-title">📋 Holdings</h2>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="compare-table" id="portfolioTable" style="margin-bottom:0">
+            <thead>
+              <tr><th>Ticker</th><th>Shares</th><th>Buy Price</th><th>Current</th><th>Value</th><th>P&amp;L</th><th>AI Signal</th><th>Action</th></tr>
+            </thead>
+            <tbody id="portfolioBody">
+              <tr><td colspan="8" class="table-empty">Add positions to track your portfolio</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <!-- Allocation Chart -->
+      <div class="chart-panel">
+        <h2 class="panel-title" style="margin-bottom:12px">🥧 Allocation</h2>
+        <div style="height:220px"><canvas id="allocationChart"></canvas></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ══════════════════ PAGE: ABOUT ══════════════════ -->
+  <main class="page" id="page-about">
+    <div class="about-container">
+      <div class="about-hero">
+        <div class="about-hero-icon">📈</div>
+        <h1>StockAI Pro</h1>
+        <p class="about-subtitle">Advanced AI-powered stock price forecasting using LSTM, GRU, and Transformer neural networks with real-time technical analysis, portfolio tracking, and AI sentiment analysis.</p>
+      </div>
+
+      <div class="about-grid">
+        <div class="about-card"><div class="about-card-icon">🧠</div><h3>Deep Learning Models</h3><p>Three architectures — LSTM, GRU, and Transformer — trained on 60+ days of historical data with RSI, MACD, Bollinger Bands, SMA, and EMA features predict next-day closing prices.</p></div>
+        <div class="about-card"><div class="about-card-icon">📡</div><h3>Data Sources</h3><p>Yahoo Finance, Alpha Vantage, and Quandl APIs. All sources are merged, normalized, and checked for outliers before model input to ensure high-quality predictions.</p></div>
+        <div class="about-card"><div class="about-card-icon">⚙️</div><h3>Preprocessing</h3><p>Z-score outlier removal, seasonal decomposition, missing data imputation, MinMax normalization, and strict time-split validation to prevent data leakage.</p></div>
+        <div class="about-card"><div class="about-card-icon">📏</div><h3>Evaluation</h3><p>Models graded on RMSE, MAE, MAPE, and R² on held-out test sets. The Model Compare page benchmarks all three architectures with full statistical analysis.</p></div>
+        <div class="about-card"><div class="about-card-icon">💼</div><h3>Portfolio Tracker</h3><p>Track your holdings, monitor P&L, view AI-powered next-day projections for your portfolio, and get rebalancing suggestions based on model confidence scores.</p></div>
+        <div class="about-card"><div class="about-card-icon">📰</div><h3>AI News Sentiment</h3><p>Simulated market news feed with NLP-based sentiment scoring. Each article is tagged Bullish / Bearish / Neutral with confidence score. Aggregate sentiment feeds into AI signal.</p></div>
+      </div>
+
+      <div class="about-table-wrap">
+        <h3>Feature Summary</h3>
+        <table class="about-table">
+          <thead><tr><th>Component</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td>Data Sources</td><td>Yahoo Finance, Alpha Vantage, Quandl</td></tr>
+            <tr><td>Technical Indicators</td><td>RSI, MACD, Bollinger Bands, SMA-20, SMA-50, EMA-12, EMA-26</td></tr>
+            <tr><td>Model Architectures</td><td>LSTM, GRU, Transformer (multi-head attention)</td></tr>
+            <tr><td>Preprocessing</td><td>Outlier removal, seasonal adjustment, normalization, time-split</td></tr>
+            <tr><td>Evaluation Metrics</td><td>RMSE, MAE, MAPE, R² on held-out test set</td></tr>
+            <tr><td>AI Forecast</td><td>30-day multi-scenario (Bull / Base / Bear) with confidence intervals</td></tr>
+            <tr><td>Screener</td><td>Filter all stocks by sector, AI signal, confidence, and more</td></tr>
+            <tr><td>Portfolio Tracker</td><td>P&L tracking with AI-powered next-day value projection</td></tr>
+            <tr><td>News Sentiment</td><td>Simulated NLP-based sentiment scoring per article and stock</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="about-disclaimer">
+        <strong>⚠️ Disclaimer:</strong> StockAI Pro is for educational and research purposes only. All data is simulated and predictions are not financial advice. Past model performance does not guarantee future accuracy. Always consult a qualified financial advisor before making any investment decisions.
+      </div>
+    </div>
+  </main>
+
+  <!-- Tooltip -->
+  <div class="tooltip-popup" id="tooltipPopup"></div>
+
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
