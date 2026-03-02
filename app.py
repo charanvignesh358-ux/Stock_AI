@@ -8,7 +8,10 @@ from flask_cors import CORS
 import numpy as np
 import json, os, threading
 
-app = Flask(__name__, static_folder='.', static_url_path='')
+# Absolute path to the project root (works on both local and Render)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+app = Flask(__name__, static_folder=BASE_DIR, static_url_path='')
 
 # Fix MIME types for CSS and JS
 import mimetypes
@@ -16,7 +19,7 @@ mimetypes.add_type('text/css', '.css')
 mimetypes.add_type('application/javascript', '.js')
 CORS(app)
 
-RESULTS_DIR = 'results'
+RESULTS_DIR = os.path.join(BASE_DIR, 'results')
 os.makedirs(RESULTS_DIR, exist_ok=True)
 
 # ── In-memory cache
@@ -32,17 +35,15 @@ def get_results(ticker: str):
 
 @app.route('/')
 def index():
-    return send_from_directory('.', 'index.html')
+    return send_from_directory(BASE_DIR, 'index.html')
 
 @app.route('/<path:path>')
 def static_files(path):
     """Serve CSS, JS, and other static assets."""
-    file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), path)
+    file_path = os.path.join(BASE_DIR, path)
     if os.path.exists(file_path) and os.path.isfile(file_path):
-        directory = os.path.dirname(file_path)
-        filename = os.path.basename(file_path)
-        return send_from_directory(directory, filename)
-    return send_from_directory(os.path.dirname(os.path.abspath(__file__)), 'index.html')
+        return send_from_directory(os.path.dirname(file_path), os.path.basename(file_path))
+    return send_from_directory(BASE_DIR, 'index.html')
 
 
 @app.route('/api/predict/<ticker>')
